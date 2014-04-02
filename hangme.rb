@@ -50,7 +50,7 @@ class Hangman
 end
 
 class HumanPlayer
-  def guess(word_size)
+  def guess(word_state)
     while true do
       puts "What LETTER do you want to guess?"
 
@@ -76,7 +76,7 @@ class HumanPlayer
 end
 
 class ComputerPlayer
-  attr_accessor :dict_arr, :word, :word_size, :poss_words
+  attr_accessor :dict_arr, :word, :poss_words, :guessed_letters, :word_state
 
   def initialize(dict_file)
     @dict_arr = File.readlines(dict_file).select { |word|
@@ -84,18 +84,21 @@ class ComputerPlayer
     }.map(&:chomp)
   end
 
-  def guess(word_size)
-    self.word_size = word_size
-    self.poss_guesses.pop
+  def guessed_letters
+    @guessed_letters ||= []
+  end
+
+  def guess(word_state)
+    # MUST be called first
+    self.word_state = word_state
+
+    # Must be called after
+    (self.guessed_letters << self.poss_guesses(word_state).pop).last
   end
 
   def word_size=(word_size)
     if !@word_size
       @word_size = word_size
-
-      p self.poss_words = self.dict_arr.select { |word|
-        word.length == word_size
-      }
 
       p self.poss_words.length
     end
@@ -105,12 +108,22 @@ class ComputerPlayer
 
   end
 
-  def poss_guesses
-    @poss_guesses ||= ('a'..'z').to_a.shuffle
+  def poss_guesses(word_state)
+    p self.poss_words = self.poss_words.select { |word|
+      valid = true
+      word.split("").each_with_index { |letter, index |
+        if !(word_state[index] == "_")
+          valid = (letter == word_state[index])
+        end
+      }
+      valid
+    }.join.split("").uniq - self.guessed_letters
   end
 
   def poss_words
-    @poss_words ||= []
+    @poss_words ||= self.dict_arr.select { |word|
+      word.length == self.word_state.size
+    }
   end
 
   def check(char)
