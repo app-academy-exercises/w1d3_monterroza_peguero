@@ -9,7 +9,7 @@ class Hangman
   def play
     until won? || self.mistakes == 10 do
 
-      char = self.guesser.guess
+      char = self.guesser.guess(self.word_state)
 
       index_array = self.checker.check(char)
 
@@ -49,9 +49,8 @@ class Hangman
   end
 end
 
-
 class HumanPlayer
-  def guess
+  def guess(word_size)
     while true do
       puts "What LETTER do you want to guess?"
 
@@ -64,8 +63,10 @@ class HumanPlayer
     end
   end
 
-  def check
-    # human, is this letter in your word, and if so where?
+  def check(char)
+    puts "Human, enter any indices that match this letter (separated by commmas): #{char}"
+    puts "[Just hit ENTER if none.]"
+    gets.chomp.split(',').map(&:to_i)
   end
 
   def pick_word
@@ -75,7 +76,7 @@ class HumanPlayer
 end
 
 class ComputerPlayer
-  attr_accessor :dict_arr, :word
+  attr_accessor :dict_arr, :word, :word_size, :poss_words
 
   def initialize(dict_file)
     @dict_arr = File.readlines(dict_file).select { |word|
@@ -83,8 +84,33 @@ class ComputerPlayer
     }.map(&:chomp)
   end
 
-  def guess
+  def guess(word_size)
+    self.word_size = word_size
+    self.poss_guesses.pop
+  end
 
+  def word_size=(word_size)
+    if !@word_size
+      @word_size = word_size
+
+      p self.poss_words = self.dict_arr.select { |word|
+        word.length == word_size
+      }
+
+      p self.poss_words.length
+    end
+  end
+
+  def smart_guess(word_size)
+
+  end
+
+  def poss_guesses
+    @poss_guesses ||= ('a'..'z').to_a.shuffle
+  end
+
+  def poss_words
+    @poss_words ||= []
   end
 
   def check(char)
@@ -105,6 +131,6 @@ class ComputerPlayer
   end
 end
 
-# Hangman.new(checker: HumanPlayer.new(), guesser: ComputerPlayer.new("dictionary.txt")).play
+Hangman.new(checker: HumanPlayer.new(), guesser: ComputerPlayer.new("dictionary.txt")).play
 
-Hangman.new().play
+# Hangman.new().play
