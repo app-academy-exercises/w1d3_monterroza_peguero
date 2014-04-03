@@ -8,7 +8,6 @@ class Hangman
 
   def play
     until won? || self.mistakes == 10 do
-
       char = self.guesser.guess(self.word_state)
 
       index_array = self.checker.check(char)
@@ -22,7 +21,7 @@ class Hangman
       print_state
     end
 
-    puts self.mistakes >= 10 ? "You've lost..." : "You've won!"
+    puts self.mistakes >= 10 ? "Guesser lost..." : "Guesser won!"
   end
 
   def mistakes
@@ -51,7 +50,7 @@ end
 
 class HumanPlayer
   def guess(word_state)
-    while true do
+    loop do
       puts "What LETTER do you want to guess?"
 
       var = gets.chomp.downcase
@@ -66,7 +65,7 @@ class HumanPlayer
   def check(char)
     puts "Human, enter any indices that match this letter (separated by commmas): #{char}"
     puts "[Just hit ENTER if none.]"
-    gets.chomp.split(',').map(&:to_i)
+    gets.chomp.split(',').map{|val| Integer(val) - 1}
   end
 
   def pick_word
@@ -79,9 +78,9 @@ class ComputerPlayer
   attr_accessor :dict_arr, :word, :poss_words, :guessed_letters, :word_state
 
   def initialize(dict_file)
-    @dict_arr = File.readlines(dict_file).select { |word|
-      !word.include?("-")
-    }.map(&:chomp)
+    @dict_arr = File.readlines(dict_file).select do |word|
+      !word.include?("-") && !word.include?("'")
+    end.map(&:chomp)
   end
 
   def guessed_letters
@@ -93,46 +92,37 @@ class ComputerPlayer
     self.word_state = word_state
 
     # Must be called after
-    (self.guessed_letters << self.poss_guesses(word_state).pop).last
-  end
-
-  def word_size=(word_size)
-    if !@word_size
-      @word_size = word_size
-
-      p self.poss_words.length
+    p letters = poss_guesses(word_state)
+    vowels = %w[ a e i o u ] & letters
+    if vowels.size > 0
+      (self.guessed_letters << vowels.sample).last
+    else
+      (self.guessed_letters << letters.sample).last
     end
-  end
-
-  def smart_guess(word_size)
-
   end
 
   def poss_guesses(word_state)
-    p self.poss_words = self.poss_words.select { |word|
-      valid = true
-      word.split("").each_with_index { |letter, index |
-        if !(word_state[index] == "_")
-          valid = (letter == word_state[index])
-        end
-      }
-      valid
-    }.join.split("").uniq - self.guessed_letters
+    self.poss_words = self.poss_words.select do |word|
+      word.split("").map.with_index do |letter, index|
+        ["_", letter].include? word_state[index]
+      end.all?
+    end
+
+    self.poss_words.join.split("").uniq - self.guessed_letters
   end
 
   def poss_words
-    @poss_words ||= self.dict_arr.select { |word|
+    @poss_words ||= self.dict_arr.select do |word|
       word.length == self.word_state.size
-    }
+    end
   end
 
   def check(char)
-    index_array = []
-    self.word.each_with_index do |val, index|
-      index_array << index if val == char
+    [].tap do |index_array|
+      self.word.each_with_index do |val, index|
+        index_array << index if val == char
+      end
     end
-
-    index_array
   end
 
   def pick_word
@@ -144,6 +134,6 @@ class ComputerPlayer
   end
 end
 
-Hangman.new(checker: HumanPlayer.new(), guesser: ComputerPlayer.new("dictionary.txt")).play
+Hangman.new(checker: HumanPlayer.new, guesser: ComputerPlayer.new("dictionary.txt")).play
 
 # Hangman.new().play
